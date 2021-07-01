@@ -1,5 +1,4 @@
-import io
-from typing import List, Any
+from typing import List, Any, IO
 from tqdm import tqdm
 import xml.etree.ElementTree as ET
 import re
@@ -15,7 +14,7 @@ class StackExchangePost:
     tags: List[str]
 
 
-def parse_posts(f: io.IO[Any]) -> List[StackExchangePost]:
+def parse_posts(f: IO[Any]) -> List[StackExchangePost]:
     tree = ET.parse(f)
     posts = tree.getroot()
     pairs: List[StackExchangePost] = []
