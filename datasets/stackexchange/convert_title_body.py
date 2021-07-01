@@ -29,9 +29,6 @@ max_body_len = 4096
 min_score = 3
 
 
-
-
-
 def parse_posts(f: IO[Any]) -> List[Dict]:
     tree = ET.parse(f)
     posts = tree.getroot()
@@ -82,8 +79,8 @@ for filepath in glob.glob(os.path.join(input_folder, "*.7z")):
     name = os.path.basename(filepath.strip(".7z"))
     output_path = os.path.join(output_folder, f"{name}.jsonl.gz")
 
-    #if os.path.exists(output_path):
-    #    continue
+    if os.path.exists(output_path):
+        continue
 
     print(filepath, "->", output_path)
     convert_to_jsonl_gz(filepath, output_path)
