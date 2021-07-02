@@ -1,0 +1,50 @@
+[tool.poetry]
+name = "flax-sentence-embeddings"
+version = "0.1.0"
+description = "Flax Sentence Embeddings on 1B+ training pairs"
+authors = ["Nils Reimer"]
+
+packages = [
+    { include = "datasets" }
+]
+
+[tool.poetry.dependencies]
+python = "^3.6"
+numpy = "*"
+# flax = "*"
+torch = "*"
+internetarchive = "*"
+transformers = "*"
+sentence_transformers = "*" 
+py7zr = "*"
+tqdm = "*"
+loguru = "*"
+
+[tool.poetry.dev-dependencies]
+pytest = "^3.4"
+black = "*"
+pylama = "*"
+
+[tool.black]
+line-length = 100
+target-version = ['py37']
+include = '\.pyi?$'
+exclude = '''
+
+(
+  /(
+      \.eggs         # exclude a few common directories in the
+    | \.git          # root of the project
+    | \.hg
+    | \.mypy_cache
+    | \.tox
+    | \.venv
+    | _build
+    | buck-out
+    | build
+    | dist
+  )/
+  | foo.py           # also separately exclude a file named foo.py in
+                     # the root of the project
+)
+'''
