@@ -71,9 +71,9 @@ def parse_posts(f: IO[Any]) -> List[Dict]:
             answer = re.sub("<.*?>", "", data["Body"]).strip()
             score = int(data["Score"])
             if len(mydict[q_id]) <= 2: #If this question was encountered first time in the answers list
-                mydict[q_id].append(answer) #Adding question for maximum score question
+                mydict[q_id].append(answer) #Adding question for highest score question
                 mydict[q_id].append(score)
-                mydict[q_id].append(answer) #Adding question for minimum score question
+                mydict[q_id].append(answer) #Adding question for lowest score question
                 mydict[q_id].append(score)
             else:
                 if mydict[q_id][3] < score: #Comparing if question has higher score than existing question
@@ -83,19 +83,19 @@ def parse_posts(f: IO[Any]) -> List[Dict]:
                     mydict[q_id][5] = score
                     mydict[q_id][4] = answer
 
-    pairs1 = [] #Title,body pair
-    pairs2 = [] #Title,best answer pair
-    pairs3 = [] #Title + body,best answer pair
-    pairs4 = [] #Title + body,best answer and least answer
+    pairs1 = [] #title, body combination
+    pairs2 = [] #title, highest_score_answer combination
+    pairs3 = [] #title + body, highest_score_answer combination
+    pairs4 = [] #title + body, highly_score_answer and low answer combinations
     for post in posts:
         data = post.attrib
         if data["PostTypeId"] == "1":
             pairs1.append({'texts': [mydict[int(data["Id"])][0],[mydict[int(data["Id"])][1]]], 'tags': tags}) #title+body
             if len(mydict[int(data["Id"])])>2:
-              pairs2.append({'texts': [mydict[int(data["Id"])][0],[mydict[int(data["Id"])][2]]], 'tags': tags}) #title + highest scored
-              pairs3.append({'texts': [mydict[int(data["Id"])][0]+ " " +mydict[int(data["Id"])][1], mydict[int(data["Id"])][2]], 'tags': tags}) #title+body, highest scored
-              if mydict[int(data["Id"])][3] - mydict[int(data["Id"])][5] >= 50: #If the best and least answers have a difference of 50 votes
-                pairs4.append({'texts': [mydict[int(data["Id"])][0]+ " " +mydict[int(data["Id"])][1], mydict[int(data["Id"])][2], mydict[int(data["Id"])][4]], 'tags': tags}) #title+body, high scored,least scored 
+              pairs2.append({'texts': [mydict[int(data["Id"])][0],[mydict[int(data["Id"])][2]]], 'tags': tags}) #title + highest scored asnwer
+              pairs3.append({'texts': [mydict[int(data["Id"])][0] + " " + mydict[int(data["Id"])][1], mydict[int(data["Id"])][2]], 'tags': tags}) #title+body, highest scored answer
+              if mydict[int(data["Id"])][3] - mydict[int(data["Id"])][5] >= 100: #If the best and least scored answers have a difference of atleast 100 votes
+                pairs4.append({'texts': [mydict[int(data["Id"])][0]+ " " + mydict[int(data["Id"])][1], mydict[int(data["Id"])][2], mydict[int(data["Id"])][4]], 'tags': tags}) #title+body, highloy scored answer, low scored answer 
     
     pairs.append(pairs1)
     pairs.append(pairs2)
@@ -118,7 +118,7 @@ def extract_posts(stack_exchange_file: str) -> List[Dict]:
 
 def convert_to_jsonl_gz(input_file: str, output_file: str) -> None:
     posts = extract_posts(input_file)
-    count = 0 #Used for naming the files according to the combinations in pairs
+    count = 0 #Used for naming the files according to the combinations 
     for post in posts: 
       random.shuffle(post)
       if len(post) == 0:
@@ -127,11 +127,11 @@ def convert_to_jsonl_gz(input_file: str, output_file: str) -> None:
       if count == 0:
         output_file = os.path.join(output_folder, f"{name}_title_body.jsonl.gz")
       elif count == 1:
-        output_file = os.path.join(output_folder, f"{name}_title_highscore.jsonl.gz")
+        output_file = os.path.join(output_folder, f"{name}_title_highestScoreAnswer.jsonl.gz")
       elif count == 2:
-        output_file = os.path.join(output_folder, f"{name}title_body_highscore.jsonl.gz")
+        output_file = os.path.join(output_folder, f"{name}title_body_highestScoreAnswer.jsonl.gz")
       elif count == 3:
-        output_file = os.path.join(output_folder, f"{name}title_body_highscore_lowscore.jsonl.gz")
+        output_file = os.path.join(output_folder, f"{name}title_body_highlyScoredAnswer_lowScoredAnswer.jsonl.gz")
       
       if len(post) >= large_stackexchange_threshold:
           fOut = gzip.open(output_file, "wt")
