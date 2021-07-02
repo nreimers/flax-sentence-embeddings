@@ -4,6 +4,8 @@ from jax import numpy as jnp
 
 @jax.jit
 def cos_sim(a, b):
+    a = a / jnp.linalg.norm(a, ord=2, axis=1)[:, None]
+    b = b / jnp.linalg.norm(b, ord=2, axis=1)[:, None]
     return (a @ b.T).T
 
 
