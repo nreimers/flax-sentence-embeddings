@@ -11,8 +11,10 @@ packages = [
 [tool.poetry.dependencies]
 python = "^3.6"
 numpy = "*"
-# flax = "*"
+flax = "*"
+jax = "*"
 torch = "*"
+pytest = "^3.4"
 internetarchive = "*"
 transformers = "*"
 sentence_transformers = "*" 
