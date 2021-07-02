@@ -40,26 +40,71 @@ def parse_posts(f: IO[Any]) -> List[Dict]:
     tree = ET.parse(f)
     posts = tree.getroot()
     pairs = []
+    tags = []
     num_questions = 0
 
+    mydict = {}
+    #Create a dictionary object for every question with Key as the question id and Value as a set of strings containing all details
+    for post in posts:
+          data = post.attrib
+          if data["PostTypeId"] == "1":
+              add_data = []
+              title = re.sub("<.*?>", "", data["Title"]).strip()
+              body = re.sub("<.*?>", "", data["Body"]).strip()
+              num_questions += 1
+              tags_str = data["Tags"]
+              tags.append(re.findall(r"<(.*?)>", tags_str))
+              add_data.append(title)
+              add_data.append(body)
+              score = int(data["Score"])
+              if len(title) < min_title_len or len(body) < min_body_len or len(body) > max_body_len or score < min_score: #If length is greater/lesser or score is lesser
+                continue
+              mydict[int(data["Id"])] = add_data
+
+    #For every answer, checks if it is the best/worst answer for it's corresponding question and changes accordingly.
     for post in posts:
         data = post.attrib
-        if data["PostTypeId"] == "1":  # focus just on questions for now, not answers
-            num_questions += 1
-            # remove all HTML tags (including links!) and normalize whitespace
-            title = re.sub("<.*?>", "", data["Title"]).strip()
-            body = re.sub("<.*?>", "", data["Body"]).strip()
-            tags_str = data["Tags"]
-            tags = re.findall(r"<(.*?)>", tags_str)
+        if data["PostTypeId"] == "2":
+            q_id = int(data["ParentId"])
+            if mydict[q_id] == None: #If the question was discarded
+              continue
+            answer = re.sub("<.*?>", "", data["Body"]).strip()
             score = int(data["Score"])
+            if len(mydict[q_id]) <= 2: #If this question was encountered first time in the answers list
+                mydict[q_id].append(answer) #Adding question for maximum score question
+                mydict[q_id].append(score)
+                mydict[q_id].append(answer) #Adding question for minimum score question
+                mydict[q_id].append(score)
+            else:
+                if mydict[q_id][3] < score: #Comparing if question has higher score than existing question
+                    mydict[q_id][3] = score
+                    mydict[q_id][2] = answer
+                elif mydict[q_id][5] > score: #Comparing if question has lower score than existing question
+                    mydict[q_id][5] = score
+                    mydict[q_id][4] = answer
 
-            if len(title) < min_title_len or len(body) < min_body_len or len(body) > max_body_len or score < min_score:
-                continue
-
-            pairs.append({'texts': [title, body], 'tags': tags})
+    pairs1 = [] #Title,body pair
+    pairs2 = [] #Title,best answer pair
+    pairs3 = [] #Title + body,best answer pair
+    pairs4 = [] #Title + body,best answer and least answer
+    for post in posts:
+        data = post.attrib
+        if data["PostTypeId"] == "1":
+            pairs1.append({'texts': [mydict[int(data["Id"])][0],[mydict[int(data["Id"])][1]]], 'tags': tags}) #title+body
+            if len(mydict[int(data["Id"])])>2:
+              pairs2.append({'texts': [mydict[int(data["Id"])][0],[mydict[int(data["Id"])][2]]], 'tags': tags}) #title + highest scored
+              pairs3.append({'texts': [mydict[int(data["Id"])][0]+ " " +mydict[int(data["Id"])][1], mydict[int(data["Id"])][2]], 'tags': tags}) #title+body, highest scored
+              if mydict[int(data["Id"])][3] - mydict[int(data["Id"])][5] >= 50: #If the best and least answers have a difference of 50 votes
+                pairs4.append({'texts': [mydict[int(data["Id"])][0]+ " " +mydict[int(data["Id"])][1], mydict[int(data["Id"])][2], mydict[int(data["Id"])][4]], 'tags': tags}) #title+body, high scored,least scored 
+    
+    pairs.append(pairs1)
+    pairs.append(pairs2)
+    pairs.append(pairs3)
+    pairs.append(pairs4) #All pairs are added to a pairs array
     print("Questions:", num_questions)
-    print("Questions after filter:", len(pairs))
-    return pairs
+    print("Questions after filter:", len(pairs1))
+    
+    return pairs 
 
 
 def extract_posts(stack_exchange_file: str) -> List[Dict]:
@@ -73,20 +118,32 @@ def extract_posts(stack_exchange_file: str) -> List[Dict]:
 
 def convert_to_jsonl_gz(input_file: str, output_file: str) -> None:
     posts = extract_posts(input_file)
-    random.shuffle(posts)
-    if len(posts) == 0:
-        return
+    count = 0 #Used for naming the files according to the combinations in pairs
+    for post in posts: 
+      random.shuffle(post)
+      if len(post) == 0:
+          return
+        
+      if count == 0:
+        output_file = os.path.join(output_folder, f"{name}_title_body.jsonl.gz")
+      elif count == 1:
+        output_file = os.path.join(output_folder, f"{name}_title_highscore.jsonl.gz")
+      elif count == 2:
+        output_file = os.path.join(output_folder, f"{name}title_body_highscore.jsonl.gz")
+      elif count == 3:
+        output_file = os.path.join(output_folder, f"{name}title_body_highscore_lowscore.jsonl.gz")
+      
+      if len(post) >= large_stackexchange_threshold:
+          fOut = gzip.open(output_file, "wt")
+      else:
+          fOut = open(small_stackexchange_filepath, "a")
 
-    if len(posts) >= large_stackexchange_threshold:
-        fOut = gzip.open(output_file, "wt")
-    else:
-        fOut = open(small_stackexchange_filepath, "a")
+      for pos in post:
+          fOut.write(json.dumps(pos))
+          fOut.write("\n")
 
-    for post in posts:
-        fOut.write(json.dumps(post))
-        fOut.write("\n")
-
-    fOut.close()
+      fOut.close()
+      count = count+1
 
 
 
