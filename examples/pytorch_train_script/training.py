@@ -101,6 +101,7 @@ model.fit(train_objectives=[(train_dataloader, train_loss)],
           epochs=1,
           warmup_steps=warmup_steps,
           steps_per_epoch=steps_per_epoch,
+          scheduler='warmupconstant',   #Remove this line when you train on larger datasets. After warmup, LR will be constant
           use_amp=use_amp
           )
 
