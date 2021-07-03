@@ -1,0 +1,6 @@
+optax
+flax
+tqdm
+transformers
+datasets
+wandb
