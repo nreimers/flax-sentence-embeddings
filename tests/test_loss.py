@@ -1,8 +1,7 @@
 import unittest
 import torch
 from torch_impl.MultipleNegativeRankingLoss import MultipleNegativesRankingLoss
-from trainer.loss.basic import padded_cross_entropy_loss
-from trainer.loss.custom import multiple_negatives_ranking_loss
+from trainer.loss.custom import multiple_negatives_ranking_loss, multiple_negatives_ranking_loss_single_input
 from jax import value_and_grad
 from jax import random
 import jax.numpy as jnp
@@ -55,7 +54,7 @@ class LossTest(unittest.TestCase):
         torch_loss.backward()
         torch_grad = torch.stack([a_torch.grad, b_torch.grad], dim=1).numpy()
 
-        jax_loss, jax_grad = value_and_grad(multiple_negatives_ranking_loss)(jax_input)
+        jax_loss, jax_grad = value_and_grad(multiple_negatives_ranking_loss_single_input)(jax_input)
         assert abs(torch_loss.item() - jax_loss) <= 0.001, "loss : {} vs {}".format(jax_loss, torch_loss.item())
 
         assert onp.all(onp.abs(torch_grad - jax_grad) < 0.001)

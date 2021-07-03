@@ -41,7 +41,6 @@ class MultipleNegativesRankingLoss(nn.Module):
         self.cross_entropy_loss = nn.CrossEntropyLoss()
 
     def forward(self, embeddings_a, embeddings_b, labels: Tensor):
-
         scores = self.similarity_fct(embeddings_a, embeddings_b) * self.scale
         labels = torch.tensor(range(len(scores)), dtype=torch.long,
                               device=scores.device)  # Example a[i] should match with b[i]
