@@ -4,15 +4,19 @@ from .basic import padded_cross_entropy_loss
 from ..utils.ops import cos_sim
 
 
-# @jax.jit
+@jax.jit
 def multiple_negatives_ranking_loss(embeddings: jnp.DeviceArray, scale: float = 20.0,
                                     similarity_fct=cos_sim):
-
     embeddings_a = embeddings[:, 0, :]
     # positive and hard negatives (if any, flattened and treated as additional samples).
     embeddings_b = jnp.reshape(embeddings[:, 1:, :], (-1, embeddings.shape[-1]))
-    assert (len(embeddings_a) <= len(embeddings_b))
+    return multiple_negatives_ranking_loss(embeddings_a, embeddings_b, scale, similarity_fct)
 
+
+@jax.jit
+def multiple_negatives_ranking_loss(embeddings_a: jnp.DeviceArray, embeddings_b: jnp.DeviceArray,
+                                    scale: float = 20.0, similarity_fct=cos_sim):
+    assert (len(embeddings_a) <= len(embeddings_b))
     scores = similarity_fct(embeddings_a, embeddings_b) * scale
     assert scores.shape == (len(embeddings_a), len(embeddings_b))
 
