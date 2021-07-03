@@ -34,8 +34,8 @@ class LossTest(unittest.TestCase):
         torch_cross_entropy = torch_nn.CrossEntropyLoss()
         torch_cross_entropy = torch_cross_entropy.forward(torch_scores, torch_labels)
 
-        assert onp.all(onp.abs(torch_cross_entropy.item() - jax_cross_entropy) < 0.01)
-        assert onp.all(onp.abs(torch_cross_entropy.item() - jax_padded_cross_entropy) < 0.01)
+        assert onp.all(onp.abs(torch_cross_entropy.item() - jax_cross_entropy) < 0.001)
+        assert onp.all(onp.abs(torch_cross_entropy.item() - jax_padded_cross_entropy) < 0.001)
 
 
     def test_multiple_negatives_ranking_loss(self):
@@ -56,6 +56,6 @@ class LossTest(unittest.TestCase):
         torch_grad = torch.stack([a_torch.grad, b_torch.grad], dim=1).numpy()
 
         jax_loss, jax_grad = value_and_grad(multiple_negatives_ranking_loss)(jax_input)
-        assert abs(torch_loss.item() - jax_loss) <= 0.05
+        assert abs(torch_loss.item() - jax_loss) <= 0.001, "loss : {} vs {}".format(jax_loss, torch_loss.item())
 
-        assert onp.all(onp.abs(torch_grad - jax_grad) < 0.01)
+        assert onp.all(onp.abs(torch_grad - jax_grad) < 0.001)
