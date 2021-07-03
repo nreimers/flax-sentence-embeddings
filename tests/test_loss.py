@@ -1,13 +1,43 @@
 import unittest
 import torch
 from torch_impl.MultipleNegativeRankingLoss import MultipleNegativesRankingLoss
+from trainer.loss.basic import padded_cross_entropy_loss
 from trainer.loss.custom import multiple_negatives_ranking_loss
 from jax import value_and_grad
 from jax import random
 import jax.numpy as jnp
 import numpy as onp
+import optax
+from jax import nn as jax_nn
+from torch import nn as torch_nn
+from trainer.loss.custom import padded_cross_entropy_loss
+from jax.config import config
+
+config.update("jax_enable_x64", True)
 
 class LossTest(unittest.TestCase):
+    def test_jax_cross_entropy_loss(self):
+        key = random.PRNGKey(0)
+        key, a_key, b_key = random.split(key, 3)
+
+        sample_count = 200
+        label_count = 400
+        scores = random.normal(a_key, (sample_count, label_count))
+        torch_scores = torch.tensor(onp.asarray(scores), requires_grad=True)
+
+        labels = random.randint(b_key, (sample_count, ), minval=0, maxval=label_count - 1)
+        torch_labels = torch.tensor(onp.asarray(labels), dtype=torch.long)
+        jax_labels = jax_nn.one_hot(labels, num_classes=label_count)
+
+        jax_cross_entropy = jnp.mean(optax.softmax_cross_entropy(scores, jax_labels))
+        jax_padded_cross_entropy = padded_cross_entropy_loss(scores, labels)
+        torch_cross_entropy = torch_nn.CrossEntropyLoss()
+        torch_cross_entropy = torch_cross_entropy.forward(torch_scores, torch_labels)
+
+        assert onp.all(onp.abs(torch_cross_entropy.item() - jax_cross_entropy) < 0.01)
+        assert onp.all(onp.abs(torch_cross_entropy.item() - jax_padded_cross_entropy) < 0.01)
+
+
     def test_multiple_negatives_ranking_loss(self):
         """Tests the correct computation of multiple_negatives_ranking_loss"""
         key = random.PRNGKey(0)

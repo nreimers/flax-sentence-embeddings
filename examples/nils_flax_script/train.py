@@ -8,6 +8,7 @@ Open TODO:
 - Evaluate the model if it actually learns sensible embeddings. E.g. evaluate on STS benchmark dataset
 - Compare results with PyTorch training script if comparable
 """
+from jax.config import config
 
 from dataclasses import dataclass, field
 from functools import partial
@@ -143,6 +144,7 @@ def data_collator(batch, tokenizer):
 
 
 def main(args, train_dataloader):
+    config.update("jax_enable_x64", True)
     model = FlaxAutoModel.from_pretrained(args.model_id)
     tokenizer = AutoTokenizer.from_pretrained(args.model_id)
 
