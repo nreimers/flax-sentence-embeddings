@@ -24,7 +24,7 @@ from transformers import AutoTokenizer, FlaxAutoModel
 class TrainingArgs:
     model_id: str = "bert-base-uncased"
     max_epochs: int = 2
-    batch_size_per_device: int = 32 # it must be multiple of 8 (when on TPUs)
+    batch_size_per_device: int = 32
     seed: int = 42
     lr: float = 2e-5
     init_lr: float = 1e-5
