@@ -40,9 +40,7 @@ class MultipleNegativesRankingLoss(nn.Module):
         self.similarity_fct = similarity_fct
         self.cross_entropy_loss = nn.CrossEntropyLoss()
 
-    def forward(self, reps: Iterable[Iterable[float]], labels: Tensor):
-        embeddings_a = reps[0]
-        embeddings_b = torch.cat(reps[1:])
+    def forward(self, embeddings_a, embeddings_b, labels: Tensor):
 
         scores = self.similarity_fct(embeddings_a, embeddings_b) * self.scale
         labels = torch.tensor(range(len(scores)), dtype=torch.long,
