@@ -1,7 +1,7 @@
 import unittest
 import torch
 from torch_impl.MultipleNegativeRankingLoss import MultipleNegativesRankingLoss
-from trainer.loss.custom import multiple_negatives_ranking_loss, multiple_negatives_ranking_loss_single_input
+from trainer.loss.custom import multiple_negatives_ranking_loss
 from jax import value_and_grad
 from jax import random
 import jax.numpy as jnp
@@ -9,7 +9,7 @@ import numpy as onp
 import optax
 from jax import nn as jax_nn
 from torch import nn as torch_nn
-from trainer.loss.custom import padded_cross_entropy_loss
+from trainer.loss.custom import jax_cross_entropy_loss
 from jax.config import config
 
 config.update("jax_enable_x64", True)
@@ -29,7 +29,7 @@ class LossTest(unittest.TestCase):
         jax_labels = jax_nn.one_hot(labels, num_classes=label_count)
 
         jax_cross_entropy = jnp.mean(optax.softmax_cross_entropy(scores, jax_labels))
-        jax_padded_cross_entropy = padded_cross_entropy_loss(scores, labels)
+        jax_padded_cross_entropy = jax_cross_entropy_loss(scores, labels)
         torch_cross_entropy = torch_nn.CrossEntropyLoss()
         torch_cross_entropy = torch_cross_entropy.forward(torch_scores, torch_labels)
 
@@ -47,14 +47,36 @@ class LossTest(unittest.TestCase):
         a_torch = torch.tensor(onp.asarray(a), requires_grad=True)
         b_torch = torch.tensor(onp.asarray(b), requires_grad=True)
 
-        jax_input = jnp.stack([a, b], axis=1)
-
         torch_loss = MultipleNegativesRankingLoss()
         torch_loss = torch_loss.forward(a_torch, b_torch, None)
         torch_loss.backward()
-        torch_grad = torch.stack([a_torch.grad, b_torch.grad], dim=1).numpy()
+        torch_grad = a_torch.grad.numpy()
 
-        jax_loss, jax_grad = value_and_grad(multiple_negatives_ranking_loss_single_input)(jax_input)
+        jax_loss, jax_grad = value_and_grad(multiple_negatives_ranking_loss)(a, b)
+        assert abs(torch_loss.item() - jax_loss) <= 0.001, "loss : {} vs {}".format(jax_loss, torch_loss.item())
+
+        assert onp.all(onp.abs(torch_grad - jax_grad) < 0.001)
+
+    def test_multiple_negatives_ranking_loss_triple(self):
+        """Tests the correct computation of multiple_negatives_ranking_loss, with hard negatives"""
+        key = random.PRNGKey(0)
+        key, a_key, b_key, c_key = random.split(key, 4)
+        a = random.normal(a_key, (20, 200))
+        b = random.normal(b_key, (20, 200))
+        c = random.normal(c_key, (20, 200))
+
+        a_torch = torch.tensor(onp.asarray(a), requires_grad=True)
+        b_torch = torch.tensor(onp.asarray(b), requires_grad=True)
+        c_torch = torch.tensor(onp.asarray(c), requires_grad=True)
+
+        comp_torch = torch.cat([b_torch, c_torch])
+
+        torch_loss = MultipleNegativesRankingLoss()
+        torch_loss = torch_loss.forward(a_torch, comp_torch, None)
+        torch_loss.backward()
+        torch_grad = a_torch.grad.numpy()
+
+        jax_loss, jax_grad = value_and_grad(multiple_negatives_ranking_loss)(a, jnp.concatenate([b, c], axis=0))
         assert abs(torch_loss.item() - jax_loss) <= 0.001, "loss : {} vs {}".format(jax_loss, torch_loss.item())
 
         assert onp.all(onp.abs(torch_grad - jax_grad) < 0.001)
