@@ -10,6 +10,7 @@ from flax.training import train_state
 from flax.training.common_utils import shard
 from tqdm.auto import tqdm
 from transformers import PreTrainedTokenizer, PreTrainedTokenizerFast
+from trainer.loss.custom import multiple_negatives_ranking_loss
 
 
 @dataclass
@@ -56,18 +57,6 @@ class TrainState(train_state.TrainState):
     scheduler_fn: Callable = struct.field(pytree_node=False)
 
 
-def multiple_negative_ranking_loss(embedding1, embedding2):
-    def _cross_entropy(logits):
-        bsz = logits.shape[-1]
-        labels = (jnp.arange(bsz)[..., None] == jnp.arange(bsz)[None]).astype("f4")
-        logits = jax.nn.log_softmax(logits, axis=-1)
-        loss = -jnp.sum(labels * logits, axis=-1)
-        return loss
-
-    batch_similarity = jnp.dot(embedding1, jnp.transpose(embedding2))
-    return _cross_entropy(batch_similarity)
-
-
 @partial(jax.pmap, axis_name="batch")
 def train_step(state, model_input1, model_input2, drp_rng):
     train = True
@@ -92,8 +81,7 @@ def train_step(state, model_input1, model_input2, drp_rng):
             return embedding
 
         embedding1, embedding2 = _forward(model_input1), _forward(model_input2)
-        loss = state.loss_fn(embedding1, embedding2)
-        return jnp.mean(loss)
+        return state.loss_fn(embedding1, embedding2)
 
     grad_fn = jax.value_and_grad(loss_fn)
     loss, grads = grad_fn(state.params, model_input1, model_input2, drp_rng)
@@ -159,7 +147,7 @@ def main(args):
         apply_fn=model.__call__,
         params=model.params,
         tx=tx,
-        loss_fn=multiple_negative_ranking_loss,
+        loss_fn=multiple_negatives_ranking_loss,
         scheduler_fn=lr,
     )
     state = jax_utils.replicate(state)
