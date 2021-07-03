@@ -6,7 +6,11 @@ To jsonl format
 
 python convert_archives.py input_folder output_folder
 
-Returns (title, body) pairs that pass certain quality checks
+Returns the following cominations that pass certain quality checks:
+    -> title, body combination
+    -> title, highest_score_answer combination
+    -> title + body, highest_score_answer combination
+    -> title + body, highly_score_answer and low answer combinations
 """
 
 import os
@@ -95,7 +99,7 @@ def parse_posts(f: IO[Any]) -> List[Dict]:
               pairs2.append({'texts': [mydict[int(data["Id"])][0],[mydict[int(data["Id"])][2]]], 'tags': tags}) #title + highest scored asnwer
               pairs3.append({'texts': [mydict[int(data["Id"])][0] + " " + mydict[int(data["Id"])][1], mydict[int(data["Id"])][2]], 'tags': tags}) #title+body, highest scored answer
               if mydict[int(data["Id"])][3] - mydict[int(data["Id"])][5] >= 100: #If the best and least scored answers have a difference of atleast 100 votes
-                pairs4.append({'texts': [mydict[int(data["Id"])][0]+ " " + mydict[int(data["Id"])][1], mydict[int(data["Id"])][2], mydict[int(data["Id"])][4]], 'tags': tags}) #title+body, highloy scored answer, low scored answer 
+                pairs4.append({'texts': [mydict[int(data["Id"])][0]+ " " + mydict[int(data["Id"])][1], mydict[int(data["Id"])][2], mydict[int(data["Id"])][4]], 'tags': tags}) #title+body, highly scored answer, low scored answer 
     
     pairs.append(pairs1)
     pairs.append(pairs2)
@@ -129,9 +133,9 @@ def convert_to_jsonl_gz(input_file: str, output_file: str) -> None:
       elif count == 1:
         output_file = os.path.join(output_folder, f"{name}_title_highestScoreAnswer.jsonl.gz")
       elif count == 2:
-        output_file = os.path.join(output_folder, f"{name}title_body_highestScoreAnswer.jsonl.gz")
+        output_file = os.path.join(output_folder, f"{name}_title_body_highestScoreAnswer.jsonl.gz")
       elif count == 3:
-        output_file = os.path.join(output_folder, f"{name}title_body_highlyScoredAnswer_lowScoredAnswer.jsonl.gz")
+        output_file = os.path.join(output_folder, f"{name}_title_body_highlyScoredAnswer_lowScoredAnswer.jsonl.gz")
       
       if len(post) >= large_stackexchange_threshold:
           fOut = gzip.open(output_file, "wt")
