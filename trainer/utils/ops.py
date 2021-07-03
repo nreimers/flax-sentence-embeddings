@@ -4,9 +4,9 @@ from jax import numpy as jnp
 
 @jax.jit
 def cos_sim(a, b):
-    a = a / jnp.linalg.norm(a, ord=2, axis=1)[:, None]
-    b = b / jnp.linalg.norm(b, ord=2, axis=1)[:, None]
-    return (a @ b.T).T
+    a = a / jnp.maximum(jnp.linalg.norm(a, ord=2, axis=1, keepdims=True), 1e-12)
+    b = b / jnp.maximum(jnp.linalg.norm(b, ord=2, axis=1, keepdims=True), 1e-12)
+    return a @ b.T
 
 
 @jax.jit

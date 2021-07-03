@@ -12,7 +12,7 @@ def multiple_negatives_ranking_loss(embeddings: jnp.DeviceArray, scale: float = 
     # positive and hard negatives (if any, flattened and treated as additional samples).
     embeddings_b = jnp.reshape(embeddings[:, 1:, :], (-1, embeddings.shape[-1]))
 
-    scores = similarity_fct(embeddings_a, embeddings_b) * scale
+    scores = similarity_fct(embeddings_a, embeddings_b).T * scale
     assert scores.shape == (len(embeddings_b), len(embeddings_a))
 
     labels = jnp.arange(len(embeddings_a), dtype=jnp.uint64)
