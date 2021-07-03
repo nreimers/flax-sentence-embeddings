@@ -16,5 +16,5 @@ def multiple_negatives_ranking_loss(embeddings: jnp.DeviceArray, scale: float = 
     scores = similarity_fct(embeddings_a, embeddings_b).T * scale
     assert scores.shape == (len(embeddings_b), len(embeddings_a))
 
-    labels = jnp.arange(len(embeddings_a), dtype=jnp.uint64)
+    labels = jnp.arange(len(embeddings_a), dtype=jnp.int64)
     return padded_cross_entropy_loss(scores, labels)
