@@ -2,6 +2,7 @@ import jax
 from jax import random, numpy as jnp
 from flax import linen as nn
 from trainer.loss.custom import multiple_negatives_ranking_loss
+from jax.config import config
 
 # Dummy version
 batch_size = 20
@@ -34,4 +35,5 @@ def main():
 
 
 if __name__ == "__main__":
+    config.update("jax_enable_x64", True)
     main()
