@@ -36,12 +36,16 @@ from trainer.loss.custom import multiple_negatives_ranking_loss
 
 
 def scheduler_fn(lr, init_lr, warmup_steps, num_train_steps):
+    #Warumup-constant schedule
+    return optax.linear_schedule(init_value=init_lr, end_value=lr, transition_steps=warmup_steps)
+
+    """ #Warmup-linear schedule
     decay_steps = num_train_steps - warmup_steps
     warmup_fn = optax.linear_schedule(init_value=init_lr, end_value=lr, transition_steps=warmup_steps)
     decay_fn = optax.linear_schedule(init_value=lr, end_value=1e-7, transition_steps=decay_steps)
     lr = optax.join_schedules(schedules=[warmup_fn, decay_fn], boundaries=[warmup_steps])
     return lr
-
+    """
 
 def build_tx(lr, init_lr, warmup_steps, num_train_steps, weight_decay):
     def weight_decay_mask(params):
@@ -227,12 +231,12 @@ if __name__ == '__main__':
     parser.add_argument('--input1_maxlen', type=int, default=128)
     parser.add_argument('--input2_maxlen', type=int, default=128)
     parser.add_argument('--weight_decay', type=float, default=1e-3)
-    parser.add_argument('--warmup_steps', type=int, default=2000)
+    parser.add_argument('--warmup_steps', type=int, default=500)
     parser.add_argument('--init_lr', type=float, default=1e-5)
     parser.add_argument('--lr', type=float, default=2e-5)
     parser.add_argument('--random_batch_fraction', type=float, default=0.1)
     parser.add_argument('--logging_steps', type=int, default=100)
-    parser.add_argument('--save_steps', type=int, default=1000)
+    parser.add_argument('--save_steps', type=int, default=10000)
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--epochs', type=int, default=1)
     parser.add_argument('--save_dir', default='output')
