@@ -22,6 +22,7 @@ py7zr = "*"
 tqdm = "*"
 loguru = "*"
 datasets = "^1.8.0"
+wandb = "*"
 
 [tool.poetry.dev-dependencies]
 pytest = "^3.4"
