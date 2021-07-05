@@ -91,7 +91,13 @@ poetry export -f requirements.txt --output requirements.txt
 
 - If you want a specific version of any library, edit the pyproject.toml, add it and/or replace "*" by it.
 
+## Running Tests
 
+Call this in the project folder to execute unit tests.
+
+```
+python -m unittest discover -s tests
+```
 
 
 
