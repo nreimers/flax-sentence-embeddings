@@ -22,3 +22,27 @@ def cos_sim(a: Tensor, b: Tensor):
     a_norm = torch.nn.functional.normalize(a, p=2, dim=1)
     b_norm = torch.nn.functional.normalize(b, p=2, dim=1)
     return torch.mm(a_norm, b_norm.transpose(0, 1))
+
+def mean_pooling(model_output, attention_mask):
+    """
+    Returns mean pooled embeddings from the last layer of a PyTorch based HuggingFace Transformer model.
+    """
+    embeddings = model_output[0]
+    attention_mask_expanded = attention_mask.unsqueeze(-1).expand(embeddings.shape).float()
+    sum_embeddings = torch.sum(embeddings * attention_mask_expanded, 1)
+    sum_mask = torch.clamp(attention_mask_expanded.sum(1), min=1e-9)
+    return sum_embeddings / sum_mask
+
+def max_pooling(model_output, attention_mask):
+    """
+    Returns max pooled embeddings from the last layer of a PyTorch based HuggingFace Transformer model.
+    """
+    embeddings = model_output[0]
+    attention_mask_expanded = attention_mask.unsqueeze(-1).expand(embeddings.shape).float()    
+    return torch.max(embeddings * attention_mask_expanded, 1).values
+
+def cls_pooling(model_output):
+    """
+    Returns [CLS] token embedding from the last layer of a PyTorch based HuggingFace Transformer model.
+    """
+    return model_output[0][:, 0] # 1st token is the [CLS] token

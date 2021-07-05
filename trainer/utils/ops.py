@@ -12,11 +12,38 @@ def cos_sim(a, b):
 @jax.jit
 def mean_pooling(model_output, attention_mask):
     """
-    The function applies mean poling to a set of token embeddings
+    This function applies mean pooling to contextualized embeddings produced by the last layer of a Flax based HuggingFace Transformer model.
 
-    :param model_output: last_hidden_state of the flax Transformers
-    :param attention_mask: the attention mask to zero out some vectors
-    :return: the mean pooled embeddings
+    :param model_output: model output from a model of type `FlaxPreTrainedModel`
+    :param attention_mask: attention mask in the model input
+    :return: mean pooled embeddings
     """
-    input_mask_expanded = jnp.repeat(jnp.expand_dims(attention_mask, -1), model_output.shape[2], axis=2)
-    return jnp.sum(model_output * input_mask_expanded, 1) / jnp.clip(input_mask_expanded.sum(1), a_min=1e-9)
+    embeddings = model_output[0]
+    attention_mask_expanded = jnp.broadcast_to(jnp.expand_dims(attention_mask, -1), embeddings.shape)
+    sum_embeddings = jnp.sum(embeddings * attention_mask_expanded, 1)
+    sum_mask = jnp.clip(attention_mask_expanded.sum(1), a_min=1e-9)
+    return sum_embeddings / sum_mask
+
+@jax.jit
+def max_pooling(model_output, attention_mask):
+    """
+    This function applies max pooling to contextualized embeddings produced by the last layer of a Flax based HuggingFace Transformer model.
+
+    :param model_output: model output from a model of type `FlaxPreTrainedModel`
+    :param attention_mask: attention mask in the model input
+    :return: max pooled embeddings
+    """
+    embeddings = model_output[0]
+    attention_mask_expanded = jnp.broadcast_to(jnp.expand_dims(attention_mask, -1), embeddings.shape)
+    return jnp.max(embeddings * attention_mask_expanded, 1)
+
+@jax.jit
+def cls_pooling(model_output):
+    """
+    This function returns the [CLS] token embedding produced by the last layer of a Flax based HuggingFace Transformer model.
+
+    :param model_output: model output from a model of type `FlaxPreTrainedModel`
+    :param attention_mask: attention mask in the model input
+    :return: [CLS] token embedding
+    """
+    return model_output[0][:, 0]
