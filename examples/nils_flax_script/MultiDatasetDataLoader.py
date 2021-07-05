@@ -2,13 +2,37 @@ import math
 import logging
 import random
 
+from typing import Union, List
+
+
+class InputExample:
+    """
+    Structure for one input example with texts, the label and a unique id
+    """
+    def __init__(self, guid=None, texts=None):
+        """
+        Creates one InputExample with the given texts, guid and label
+        :param guid
+            id for the example
+        :param texts
+            the texts for the example. Note, str.strip() is called on the texts
+        :param label
+            the label for the example
+        """
+        self.guid = guid
+        self.texts = texts
+
+    def __str__(self):
+        return "<InputExample> label: {}, texts: {}".format(str(self.label), "; ".join(self.texts))
+
 class MultiDatasetDataLoader:
-    def __init__(self, datasets, batch_size_pairs, batch_size_triplets=None, dataset_size_temp=-1, allow_swap=True, random_batch_fraction=0):
+    def __init__(self, datasets, batch_size_pairs, batch_size_triplets=None, dataset_size_temp=-1, allow_swap=True, random_batch_fraction=0, dataloader_len=None):
         self.allow_swap = allow_swap
         self.collate_fn = None
         self.batch_size_pairs = batch_size_pairs
         self.batch_size_triplets = batch_size_pairs if batch_size_triplets is None else batch_size_triplets
         self.random_batch_fraction = random_batch_fraction
+        self.dataloader_len = dataloader_len
 
         # Compute dataset weights
         self.dataset_lengths = list(map(len, datasets))
@@ -151,4 +175,7 @@ class MultiDatasetDataLoader:
         return batch
 
     def __len__(self):
+        if self.dataloader_len is not None and self.dataloader_len > 0:
+            return self.dataloader_len
+
         return int(self.dataset_lengths_sum / self.batch_size_pairs)

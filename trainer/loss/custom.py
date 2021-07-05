@@ -1,6 +1,6 @@
 import jax
 from jax import numpy as jnp
-from .basic import jax_cross_entropy_loss
+from .basic import jax_cross_entropy_loss, cross_entropy
 from ..utils.ops import cos_sim
 
 
@@ -19,5 +19,10 @@ def multiple_negatives_ranking_loss(embeddings_a: jnp.DeviceArray, embeddings_b:
     scores = similarity_fct(embeddings_a, embeddings_b) * scale
     assert scores.shape == (len(embeddings_a), len(embeddings_b))
 
-    labels = jnp.arange(len(scores), dtype=jnp.int64)
+    labels = jnp.arange(len(scores), dtype=jnp.int32)
     return jax_cross_entropy_loss(scores, labels)
+
+    """
+    loss = (cross_entropy(scores, axis=0) + cross_entropy(scores, axis=1)) / 2
+    return loss
+    """
