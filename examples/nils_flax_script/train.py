@@ -41,9 +41,9 @@ class TrainingArgs:
     batch_size: int = 256
     seed: int = 42
     lr: float = 2e-5
-    init_lr: float = 1e-5
+    init_lr: float = 0
     warmup_steps: int = 500
-    weight_decay: float = 1e-3
+    weight_decay: float = 1e-2
 
     input1_maxlen: int = 128
     input2_maxlen: int = 128
