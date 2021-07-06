@@ -86,11 +86,10 @@ def train_step(state, model_input1, model_input2, drp_rng):
 
     def loss_fn(params, model_input1, model_input2, drp_rng):
         def _forward(model_input):
-            attention_mask = model_input["attention_mask"][..., None]
-            embedding = state.apply_fn(**model_input, params=params, train=train, dropout_rng=drp_rng)[0]
-            attention_mask = jnp.broadcast_to(attention_mask, jnp.shape(embedding))
+            attention_mask = model_input["attention_mask"]
+            model_output = state.apply_fn(**model_input, params=params, train=train, dropout_rng=drp_rng)
 
-            embedding = mean_pooling(embedding, attention_mask)
+            embedding = mean_pooling(model_output, attention_mask)
             embedding = normalize_L2(embedding)
 
             # gather all the embeddings on same device for calculation loss over global batch
