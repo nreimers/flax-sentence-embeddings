@@ -28,31 +28,23 @@ import sys
 
 sys.path.append("../..")
 from trainer.loss.custom import multiple_negatives_ranking_loss
+from trainer.utils.ops import normalize_L2, mean_pooling
 
 
 
-
-
-
-
-def scheduler_fn(lr, init_lr, warmup_steps, num_train_steps):
-    #Warumup-constant schedule
-    return optax.linear_schedule(init_value=init_lr, end_value=lr, transition_steps=warmup_steps)
-
-    """ #Warmup-linear schedule
-    decay_steps = num_train_steps - warmup_steps
+def warmup_and_constant(lr, init_lr, warmup_steps):
     warmup_fn = optax.linear_schedule(init_value=init_lr, end_value=lr, transition_steps=warmup_steps)
-    decay_fn = optax.linear_schedule(init_value=lr, end_value=1e-7, transition_steps=decay_steps)
-    lr = optax.join_schedules(schedules=[warmup_fn, decay_fn], boundaries=[warmup_steps])
+    constant_fn = optax.constant_schedule(value=lr)
+    lr = optax.join_schedules(schedules=[warmup_fn, constant_fn], boundaries=[warmup_steps])
     return lr
-    """
 
-def build_tx(lr, init_lr, warmup_steps, num_train_steps, weight_decay):
+
+def build_tx(lr, init_lr, warmup_steps, weight_decay):
     def weight_decay_mask(params):
         params = traverse_util.flatten_dict(params)
         mask = {k: (v[-1] != "bias" and v[-2:] != ("LayerNorm", "scale")) for k, v in params.items()}
         return traverse_util.unflatten_dict(mask)
-    lr = scheduler_fn(lr, init_lr, warmup_steps, num_train_steps)
+    lr = warmup_and_constant(lr, init_lr, warmup_steps)
     tx = optax.adamw(learning_rate=lr, weight_decay=weight_decay, mask=weight_decay_mask)
     return tx, lr
 
@@ -70,15 +62,11 @@ def train_step(state, model_input1, model_input2, drp_rng):
 
     def loss_fn(params, model_input1, model_input2, drp_rng):
         def _forward(model_input):
-            attention_mask = model_input["attention_mask"][..., None]
-            embedding = state.apply_fn(**model_input, params=params, train=train, dropout_rng=drp_rng)[0]
-            attention_mask = jnp.broadcast_to(attention_mask, jnp.shape(embedding))
+            attention_mask = model_input["attention_mask"]
+            model_output = state.apply_fn(**model_input, params=params, train=train, dropout_rng=drp_rng)
 
-            embedding = embedding * attention_mask
-            embedding = jnp.mean(embedding, axis=1)
-
-            modulus = jnp.sum(jnp.square(embedding), axis=-1, keepdims=True)
-            embedding = embedding / jnp.maximum(modulus, 1e-12)
+            embedding = mean_pooling(model_output, attention_mask)
+            embedding = normalize_L2(embedding)
 
             # gather all the embeddings on same device for calculation loss over global batch
             embedding = jax.lax.all_gather(embedding, axis_name="batch")
@@ -93,7 +81,9 @@ def train_step(state, model_input1, model_input2, drp_rng):
     loss, grads = grad_fn(state.params, model_input1, model_input2, drp_rng)
     state = state.apply_gradients(grads=grads)
 
-    metrics = {"train_loss": loss, "lr": state.scheduler_fn(state.step)}
+    step = jax.lax.pmean(state.step, axis_name="batch")
+    metrics = {"train_loss": loss, "lr": state.scheduler_fn(step)}
+
     return state, metrics, new_drp_rng
 
 
@@ -169,12 +159,10 @@ def main(args, train_dataloader):
     model = FlaxAutoModel.from_pretrained(args.model)
     tokenizer = AutoTokenizer.from_pretrained(args.model)
 
-
     tx_args = {
         "lr": args.lr,
         "init_lr": args.init_lr,
         "warmup_steps": args.warmup_steps,
-        "num_train_steps": args.steps,
         "weight_decay": args.weight_decay,
     }
     tx, lr = build_tx(**tx_args)
