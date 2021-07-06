@@ -21,8 +21,7 @@ from flax import jax_utils, struct, traverse_util
 from flax.training import train_state
 from flax.training.common_utils import shard
 from tqdm.auto import tqdm
-from transformers import PreTrainedTokenizer, PreTrainedTokenizerFast
-from trainer.loss.custom import multiple_negatives_ranking_loss
+
 
 from transformers import AutoTokenizer, FlaxBertModel, FlaxAutoModel
 import sys
@@ -31,13 +30,16 @@ import json
 import logging
 from sentence_transformers import InputExample
 from MultiDatasetDataLoader import MultiDatasetDataLoader
+
+sys.path.append("../..")
 from trainer.utils.ops import normalize_L2, mean_pooling
+from trainer.loss.custom import multiple_negatives_ranking_loss
 
 
 @dataclass
 class TrainingArgs:
-    model_id: str = "microsoft/MiniLM-L12-H384-uncased"
-    max_epochs: int = 2
+    model_id: str = "nreimers/MiniLM-L6-H384-uncased"
+    max_epochs: int = 1
     batch_size: int = 256
     seed: int = 42
     lr: float = 2e-5
