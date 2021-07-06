@@ -38,11 +38,11 @@ from trainer.utils.ops import normalize_L2, mean_pooling
 class TrainingArgs:
     model_id: str = "microsoft/MiniLM-L12-H384-uncased"
     max_epochs: int = 2
-    batch_size: int = 2
+    batch_size: int = 256
     seed: int = 42
     lr: float = 2e-5
     init_lr: float = 1e-5
-    warmup_steps: int = 2000
+    warmup_steps: int = 500
     weight_decay: float = 1e-3
 
     input1_maxlen: int = 128
@@ -55,20 +55,19 @@ class TrainingArgs:
     )
 
 
-def scheduler_fn(lr, init_lr, warmup_steps, num_train_steps):
-    decay_steps = num_train_steps - warmup_steps
+def warmup_and_constant(lr, init_lr, warmup_steps):
     warmup_fn = optax.linear_schedule(init_value=init_lr, end_value=lr, transition_steps=warmup_steps)
-    decay_fn = optax.linear_schedule(init_value=lr, end_value=1e-7, transition_steps=decay_steps)
-    lr = optax.join_schedules(schedules=[warmup_fn, decay_fn], boundaries=[warmup_steps])
+    constant_fn = optax.constant_schedule(value=lr)
+    lr = optax.join_schedules(schedules=[warmup_fn, constant_fn], boundaries=[warmup_steps])
     return lr
 
 
-def build_tx(lr, init_lr, warmup_steps, num_train_steps, weight_decay):
+def build_tx(lr, init_lr, warmup_steps, weight_decay):
     def weight_decay_mask(params):
         params = traverse_util.flatten_dict(params)
         mask = {k: (v[-1] != "bias" and v[-2:] != ("LayerNorm", "scale")) for k, v in params.items()}
         return traverse_util.unflatten_dict(mask)
-    lr = scheduler_fn(lr, init_lr, warmup_steps, num_train_steps)
+    lr = warmup_and_constant(lr, init_lr, warmup_steps)
     tx = optax.adamw(learning_rate=lr, weight_decay=weight_decay, mask=weight_decay_mask)
     return tx, lr
 
@@ -139,7 +138,6 @@ def main(args, train_dataloader):
         "lr": args.lr,
         "init_lr": args.init_lr,
         "warmup_steps": args.warmup_steps,
-        "num_train_steps": 2000,
         "weight_decay": args.weight_decay,
     }
     tx, lr = build_tx(**tx_args)
