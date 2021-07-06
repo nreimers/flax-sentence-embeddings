@@ -31,6 +31,7 @@ import json
 import logging
 from sentence_transformers import InputExample
 from MultiDatasetDataLoader import MultiDatasetDataLoader
+from trainer.utils.ops import normalize_L2, mean_pooling
 
 
 @dataclass
@@ -89,11 +90,8 @@ def train_step(state, model_input1, model_input2, drp_rng):
             embedding = state.apply_fn(**model_input, params=params, train=train, dropout_rng=drp_rng)[0]
             attention_mask = jnp.broadcast_to(attention_mask, jnp.shape(embedding))
 
-            embedding = embedding * attention_mask
-            embedding = jnp.mean(embedding, axis=1)
-
-            modulus = jnp.sum(jnp.square(embedding), axis=-1, keepdims=True)
-            embedding = embedding / jnp.maximum(modulus, 1e-12)
+            embedding = mean_pooling(embedding, attention_mask)
+            embedding = normalize_L2(embedding)
 
             # gather all the embeddings on same device for calculation loss over global batch
             embedding = jax.lax.all_gather(embedding, axis_name="batch")
@@ -198,8 +196,6 @@ if __name__ == '__main__':
         logging.info("{}: {}".format(filepath, len(dataset)))
 
     train_dataloader = MultiDatasetDataLoader(datasets, batch_size_pairs=batch_size_pairs, batch_size_triplets=batch_size_triplets, random_batch_fraction=0.25)
-
-
 
     args = TrainingArgs()
     main(args, train_dataloader)

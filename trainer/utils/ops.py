@@ -4,9 +4,14 @@ from jax import numpy as jnp
 
 @jax.jit
 def cos_sim(a, b):
-    a = a / jnp.maximum(jnp.linalg.norm(a, ord=2, axis=1, keepdims=True), 1e-12)
-    b = b / jnp.maximum(jnp.linalg.norm(b, ord=2, axis=1, keepdims=True), 1e-12)
+    a = normalize_L2(a)
+    b = normalize_L2(b)
     return a @ b.T
+
+
+@jax.jit
+def normalize_L2(embedding):
+    return embedding / jnp.maximum(jnp.linalg.norm(embedding, ord=2, axis=1, keepdims=True), 1e-12)
 
 
 @jax.jit
@@ -24,6 +29,7 @@ def mean_pooling(model_output, attention_mask):
     sum_mask = jnp.clip(attention_mask_expanded.sum(1), a_min=1e-9)
     return sum_embeddings / sum_mask
 
+
 @jax.jit
 def max_pooling(model_output, attention_mask):
     """
@@ -36,6 +42,7 @@ def max_pooling(model_output, attention_mask):
     embeddings = model_output[0]
     attention_mask_expanded = jnp.broadcast_to(jnp.expand_dims(attention_mask, -1), embeddings.shape)
     return jnp.max(embeddings * attention_mask_expanded, 1)
+
 
 @jax.jit
 def cls_pooling(model_output):
