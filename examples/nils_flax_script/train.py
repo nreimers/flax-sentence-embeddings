@@ -31,18 +31,19 @@ import json
 import logging
 from sentence_transformers import InputExample
 from MultiDatasetDataLoader import MultiDatasetDataLoader
+from trainer.utils.ops import normalize_L2, mean_pooling
 
 
 @dataclass
 class TrainingArgs:
     model_id: str = "microsoft/MiniLM-L12-H384-uncased"
     max_epochs: int = 2
-    batch_size: int = 2
+    batch_size: int = 256
     seed: int = 42
     lr: float = 2e-5
-    init_lr: float = 1e-5
-    warmup_steps: int = 2000
-    weight_decay: float = 1e-3
+    init_lr: float = 0
+    warmup_steps: int = 500
+    weight_decay: float = 1e-2
 
     input1_maxlen: int = 128
     input2_maxlen: int = 128
@@ -54,20 +55,19 @@ class TrainingArgs:
     )
 
 
-def scheduler_fn(lr, init_lr, warmup_steps, num_train_steps):
-    decay_steps = num_train_steps - warmup_steps
+def warmup_and_constant(lr, init_lr, warmup_steps):
     warmup_fn = optax.linear_schedule(init_value=init_lr, end_value=lr, transition_steps=warmup_steps)
-    decay_fn = optax.linear_schedule(init_value=lr, end_value=1e-7, transition_steps=decay_steps)
-    lr = optax.join_schedules(schedules=[warmup_fn, decay_fn], boundaries=[warmup_steps])
+    constant_fn = optax.constant_schedule(value=lr)
+    lr = optax.join_schedules(schedules=[warmup_fn, constant_fn], boundaries=[warmup_steps])
     return lr
 
 
-def build_tx(lr, init_lr, warmup_steps, num_train_steps, weight_decay):
+def build_tx(lr, init_lr, warmup_steps, weight_decay):
     def weight_decay_mask(params):
         params = traverse_util.flatten_dict(params)
         mask = {k: (v[-1] != "bias" and v[-2:] != ("LayerNorm", "scale")) for k, v in params.items()}
         return traverse_util.unflatten_dict(mask)
-    lr = scheduler_fn(lr, init_lr, warmup_steps, num_train_steps)
+    lr = warmup_and_constant(lr, init_lr, warmup_steps)
     tx = optax.adamw(learning_rate=lr, weight_decay=weight_decay, mask=weight_decay_mask)
     return tx, lr
 
@@ -85,15 +85,11 @@ def train_step(state, model_input1, model_input2, drp_rng):
 
     def loss_fn(params, model_input1, model_input2, drp_rng):
         def _forward(model_input):
-            attention_mask = model_input["attention_mask"][..., None]
-            embedding = state.apply_fn(**model_input, params=params, train=train, dropout_rng=drp_rng)[0]
-            attention_mask = jnp.broadcast_to(attention_mask, jnp.shape(embedding))
+            attention_mask = model_input["attention_mask"]
+            model_output = state.apply_fn(**model_input, params=params, train=train, dropout_rng=drp_rng)
 
-            embedding = embedding * attention_mask
-            embedding = jnp.mean(embedding, axis=1)
-
-            modulus = jnp.sum(jnp.square(embedding), axis=-1, keepdims=True)
-            embedding = embedding / jnp.maximum(modulus, 1e-12)
+            embedding = mean_pooling(model_output, attention_mask)
+            embedding = normalize_L2(embedding)
 
             # gather all the embeddings on same device for calculation loss over global batch
             embedding = jax.lax.all_gather(embedding, axis_name="batch")
@@ -142,7 +138,6 @@ def main(args, train_dataloader):
         "lr": args.lr,
         "init_lr": args.init_lr,
         "warmup_steps": args.warmup_steps,
-        "num_train_steps": 2000,
         "weight_decay": args.weight_decay,
     }
     tx, lr = build_tx(**tx_args)
@@ -198,8 +193,6 @@ if __name__ == '__main__':
         logging.info("{}: {}".format(filepath, len(dataset)))
 
     train_dataloader = MultiDatasetDataLoader(datasets, batch_size_pairs=batch_size_pairs, batch_size_triplets=batch_size_triplets, random_batch_fraction=0.25)
-
-
 
     args = TrainingArgs()
     main(args, train_dataloader)
