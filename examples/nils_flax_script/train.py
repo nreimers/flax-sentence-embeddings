@@ -32,6 +32,7 @@ import logging
 from sentence_transformers import InputExample
 from MultiDatasetDataLoader import MultiDatasetDataLoader
 from trainer.utils.ops import normalize_L2, mean_pooling
+from trainer.utils.scheduler import lr_schedule
 
 
 @dataclass
@@ -43,6 +44,7 @@ class TrainingArgs:
     lr: float = 2e-5
     init_lr: float = 0
     warmup_steps: int = 500
+    warmup: bool = True
     weight_decay: float = 1e-2
 
     input1_maxlen: int = 128
@@ -55,19 +57,12 @@ class TrainingArgs:
     )
 
 
-def warmup_and_constant(lr, init_lr, warmup_steps):
-    warmup_fn = optax.linear_schedule(init_value=init_lr, end_value=lr, transition_steps=warmup_steps)
-    constant_fn = optax.constant_schedule(value=lr)
-    lr = optax.join_schedules(schedules=[warmup_fn, constant_fn], boundaries=[warmup_steps])
-    return lr
-
-
 def build_tx(lr, init_lr, warmup_steps, weight_decay):
     def weight_decay_mask(params):
         params = traverse_util.flatten_dict(params)
         mask = {k: (v[-1] != "bias" and v[-2:] != ("LayerNorm", "scale")) for k, v in params.items()}
         return traverse_util.unflatten_dict(mask)
-    lr = warmup_and_constant(lr, init_lr, warmup_steps)
+    lr = lr_schedule(lr, init_lr, warmup_steps)
     tx = optax.adamw(learning_rate=lr, weight_decay=weight_decay, mask=weight_decay_mask)
     return tx, lr
 
@@ -75,7 +70,6 @@ def build_tx(lr, init_lr, warmup_steps, weight_decay):
 class TrainState(train_state.TrainState):
     loss_fn: Callable = struct.field(pytree_node=False)
     scheduler_fn: Callable = struct.field(pytree_node=False)
-
 
 
 @partial(jax.pmap, axis_name="batch")

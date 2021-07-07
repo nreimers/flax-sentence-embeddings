@@ -99,5 +99,15 @@ Call this in the project folder to execute unit tests.
 python -m unittest discover -s tests
 ```
 
+If you would like to see the coverage, run 
+
+```
+python coverage run -m unittest discover
+coverage html
+```
+
+Then open the folder called `htmlcov` and open the HTML file you want to see the coverage for.
+For more information, check out the [coverage documentation](https://coverage.readthedocs.io/en/coverage-5.5/)
+
 
 
