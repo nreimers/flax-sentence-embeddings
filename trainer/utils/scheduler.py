@@ -1,4 +1,3 @@
-from numpy.lib.function_base import kaiser
 import optax
 
 
