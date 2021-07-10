@@ -17,7 +17,7 @@ python dataset/download_data.py --dataset_list=dataset/datasets_list.tsv --data_
 ```
 On a different note:
 
-There is another directory called dataset_list, which contains a subdirectory called stackexchange. This subdirectory contains the script to download the compressed stackexchange xml files from the internet archive. Once downloaded, these compressed stackexchange xml files need to be converted to the jsonl format for training purpose. To transform, use the the datasets/stackexchange/transforms.py script, which generates the required input data format for training.
+There is another directory called `dataset_list`, which contains a subdirectory called `stackexchange`. This subdirectory contains the script to download the compressed stackexchange `xml` files from the internet archive. Once downloaded, these compressed stackexchange xml files need to be converted to the `jsonl` format for training purpose. To transform, use the the `datasets/stackexchange/transforms.py` script, which generates the required input data format for training. A small file restructuring or cleanup is required, as the directories `dataset`, `datasets` and `dataset_list` could be confusing.
 
 ### Dataloading
 
