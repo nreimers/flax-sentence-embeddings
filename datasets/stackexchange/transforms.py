@@ -29,6 +29,9 @@ input_folder = sys.argv[1]
 output_folder = sys.argv[2]
 os.makedirs(output_folder, exist_ok=False)
 
+title_body_folder = output_folder + "/TitleBody/"
+os.makedirs(title_body_folder, exist_ok=False)
+
 title_answer_folder = output_folder + "/TitleAnswer/"
 os.makedirs(title_answer_folder, exist_ok=False)
 
@@ -133,16 +136,16 @@ def extract_posts(stack_exchange_file: str) -> List[Dict]:
 def convert_to_jsonl_gz(input_file: str, output_file: str) -> None:
     mydict = extract_posts(input_file)  
     #save title_body combination
-    #posts = extract_title_body(mydict)
-    #random.shuffle(posts)
-    #output_file = os.path.join(output_folder, f"{name}_title_body.jsonl.gz")
-    #if len(posts) == 0:
-    #    return
-    #fOut = gzip.open(output_file, "wt")
-    #for post in posts:
-    #    fOut.write(json.dumps(post))
-    #    fOut.write("\n")
-    #fOut.close()
+    posts = extract_title_body(mydict)
+    random.shuffle(posts)
+    output_file = os.path.join(title_body_folder, f"{name}.jsonl.gz")
+    if len(posts) == 0:
+        return
+    fOut = gzip.open(output_file, "wt")
+    for post in posts:
+        fOut.write(json.dumps(post))
+        fOut.write("\n")
+    fOut.close()
     #save title_highestScoreAnswer combination
     posts = extract_title_highestscored(mydict)
     random.shuffle(posts)
