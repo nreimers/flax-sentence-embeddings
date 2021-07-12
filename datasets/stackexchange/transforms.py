@@ -29,6 +29,18 @@ input_folder = sys.argv[1]
 output_folder = sys.argv[2]
 os.makedirs(output_folder, exist_ok=False)
 
+title_body_folder = output_folder + "/TitleBody/"
+os.makedirs(title_body_folder, exist_ok=False)
+
+title_answer_folder = output_folder + "/TitleAnswer/"
+os.makedirs(title_answer_folder, exist_ok=False)
+
+titlebody_answer_folder = output_folder + "/TitleBodyAnswer/"
+os.makedirs(titlebody_answer_folder, exist_ok=False)
+
+titlebody_best_worst_answer_folder = output_folder + "/TitleBodyBestWorstAnswer/"
+os.makedirs(titlebody_best_worst_answer_folder, exist_ok=False)
+
 random.seed(42)
 
 min_title_len = 20
@@ -79,29 +91,29 @@ def create_dict_for_questions(posts):
 def extract_title_body(mydict):
     pairs = [] #title_body combination
     for key in mydict:
-        pairs.append({'texts': [mydict[key][0],mydict[key][1]]}) #title+body
+        pairs.append([ mydict[key][0],mydict[key][1] ]) #title+body
     return pairs
     
 def extract_title_highestscored(mydict):
     pairs = [] #title_highestScoreAnswer
     for key in mydict:
         if len(mydict[key])>2:
-            pairs.append({'texts': [mydict[key][0],mydict[key][2]]}) #title + highest scored
+            pairs.append([ mydict[key][0],mydict[key][2] ]) #title + highest scored
     return pairs
 
 def extract_title_body_highscore(mydict):
     pairs = [] #title_body_highestScoreAnswer
     for key in mydict:
         if len(mydict[key])>2:
-            pairs.append({'texts': [mydict[key][0]+ " " +mydict[key][1], mydict[key][2]]}) #title+body, highest scored
+            pairs.append([ mydict[key][0]+ " " +mydict[key][1], mydict[key][2] ]) #title+body, highest scored
     return pairs
     
 def extract_title_body_highscore_lowscore(mydict):
     pairs = [] #title_body_highestScoreAnswer_lowlyScoredAnswer
     for key in mydict:
         if len(mydict[key])>5:
-            if mydict[key][3] - mydict[key][5] >= 100: #If the best and least answers have a difference of 100 votes
-                pairs.append({'texts': [mydict[key][0]+ " " +mydict[key][1], mydict[key][2], mydict[key][4]]}) #title+body, high scored,least scored 
+            if ((mydict[key][3] - mydict[key][5] >= 100) or (mydict[key][5]<0 )): #If the best and least answers have a difference of 100 votes
+                pairs.append([ mydict[key][0]+ " " +mydict[key][1], mydict[key][2], mydict[key][4] ]) #title+body, high scored,least scored 
     return pairs
 #===========================================================================================    
 def parse_posts(f: IO[Any]) -> List[Dict]:
@@ -126,7 +138,7 @@ def convert_to_jsonl_gz(input_file: str, output_file: str) -> None:
     #save title_body combination
     posts = extract_title_body(mydict)
     random.shuffle(posts)
-    output_file = os.path.join(output_folder, f"{name}_title_body.jsonl.gz")
+    output_file = os.path.join(title_body_folder, f"{name}.jsonl.gz")
     if len(posts) == 0:
         return
     fOut = gzip.open(output_file, "wt")
@@ -137,7 +149,7 @@ def convert_to_jsonl_gz(input_file: str, output_file: str) -> None:
     #save title_highestScoreAnswer combination
     posts = extract_title_highestscored(mydict)
     random.shuffle(posts)
-    output_file = os.path.join(output_folder, f"{name}_title_highestScoreAnswer.jsonl.gz")
+    output_file = os.path.join(title_answer_folder, f"{name}.jsonl.gz")
     if len(posts) == 0:
         return
     fOut = gzip.open(output_file, "wt")
@@ -148,7 +160,7 @@ def convert_to_jsonl_gz(input_file: str, output_file: str) -> None:
     #save title_body_highestScoreAnswer combination
     posts = extract_title_body_highscore(mydict)
     random.shuffle(posts)
-    output_file = os.path.join(output_folder, f"{name}_title_body_highestScoreAnswer.jsonl.gz")
+    output_file = os.path.join(titlebody_answer_folder, f"{name}.jsonl.gz")
     if len(posts) == 0:
         return
     fOut = gzip.open(output_file, "wt")    
@@ -159,7 +171,7 @@ def convert_to_jsonl_gz(input_file: str, output_file: str) -> None:
     #save title_body_highestScoreAnswer_lowlyScoredAnswer combination
     posts = extract_title_body_highscore_lowscore(mydict)
     random.shuffle(posts)
-    output_file = os.path.join(output_folder, f"{name}_title_body_highestScoreAnswer_lowlyScoredAnswer.jsonl.gz")
+    output_file = os.path.join(titlebody_best_worst_answer_folder, f"{name}.jsonl.gz")
     if len(posts) == 0:
         return
     fOut = gzip.open(output_file, "wt")
