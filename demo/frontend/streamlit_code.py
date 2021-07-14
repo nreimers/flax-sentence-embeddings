@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import base64
-import matplotlib.pyplot as plt
 import requests
 
 st.title('Demo applications using Flax-Sentence-Tranformers')
@@ -47,17 +46,6 @@ if anchor:
         df = df.sort_values('score', ascending=False)
 
         st.write(df)
-
-    #language = res.json()['language'][0]['label']
-    #score = res.json()['language'][0]['score']
-    #st.write(res.json()['language'][0])
-    #st.markdown(f'I am **_{round(score*100,2)}%_** sure this is **_{language}_**.')
-
-
-
-
-
-
 
 
 

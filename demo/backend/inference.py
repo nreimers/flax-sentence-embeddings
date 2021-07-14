@@ -41,7 +41,7 @@ distilroberta_model = SentenceTransformer(config.MODELS_ID['distilroberta'])
 def cos_sim(a,b):
     return jnp.matmul(a, jnp.transpose(b))/(jnp.linalg.norm(a)*jnp.linalg.norm(b))
 
-
+# Similarity using distilroberta
 def similarity_distilroberta(anchor: str, inputs: List[str]):
 
     # Creating embeddings
@@ -59,20 +59,20 @@ def similarity_distilroberta(anchor: str, inputs: List[str]):
     return df.sort_values('score', ascending=False)
 
 
-def similarity_mpnet(anchor: str, inputs: List[str]):
-
-    # Creating embeddings
-    anchor_emb = mpnet_model.encode(anchor)[None, :]
-    inputs_emb = mpnet_model.encode([input for input in inputs])
-
-    # Obtaining similarity
-    similarity = list(jnp.squeeze(cos_sim(anchor_emb, inputs_emb)))
-
-    # Returning a Pandas' dataframe
-    d = {'inputs': [input for input in inputs],
-         'score': [round(similarity[i],3) for i in range(len(similarity))]}
-    df = pd.DataFrame(d, columns=['inputs', 'score'])
-
-    return df.sort_values('score', ascending=False)
+#def similarity_mpnet(anchor: str, inputs: List[str]):
+#
+#    # Creating embeddings
+#    anchor_emb = mpnet_model.encode(anchor)[None, :]
+#    inputs_emb = mpnet_model.encode([input for input in inputs])
+#
+#    # Obtaining similarity
+#    similarity = list(jnp.squeeze(cos_sim(anchor_emb, inputs_emb)))
+#
+#    # Returning a Pandas' dataframe
+#    d = {'inputs': [input for input in inputs],
+#         'score': [round(similarity[i],3) for i in range(len(similarity))]}
+#    df = pd.DataFrame(d, columns=['inputs', 'score'])
+#
+#    return df.sort_values('score', ascending=False)
 
 
